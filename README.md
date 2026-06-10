@@ -43,6 +43,7 @@
 
 ## Структура проекта
 
+```text
 mkk_Luna/
 ├── tests/ # Playwright автотесты
 │ ├── config.js # Конфигурация и хелперы
@@ -58,6 +59,7 @@ mkk_Luna/
 ├── package.json
 ├── .env.example # Пример переменных окружения
 └── README.md
+```
 
 ## Установка и запуск
 
@@ -68,26 +70,34 @@ mkk_Luna/
 
 ### Установка зависимостей
 
+```text
 npm install
 npx playwright install
+```
 
 ### Настройка переменных окружения
 
+```text
 cp .env.example .env
 QIWI*API_TOKEN=ваш*токен
 QIWI*WALLET=ваш*кошелек
+```
 
 ## Запуск Playwright тестов
 
+```text
 npm test # Все тесты
 npm run test:headed # С браузером
 npm run test:ui # Интерактивный режим
 npm run test:report # Отчёт
+```
 
 ## Запуск Postman тестов
 
+```text
 npm install -g newman
 npm run postman:test
+```
 
 ## Технологии
 
@@ -98,8 +108,10 @@ npm run postman:test
 
 ## Контакты
 
+```text
 Telegram: @konstantinrqa
 Email: konstantinrqa@gmail.com
 GitHub: github.com/konstantinvqa-debug
+```
 
 **Дата выполнения:** 10.06.2026
