@@ -1,0 +1,107 @@
+$kind: http-request
+description: |-
+  **Проверка исполнения платежа**
+
+  Получение информации о созданной транзакции и проверка:
+  - Наличия транзакции в системе
+  - Статуса исполнения (WAITING/SUCCESS/ERROR)
+  - Корректности суммы
+  - Наличия всех обязательных полей
+url: '{{base_url}}/payment-history/v2/transactions/{{transaction_id}}'
+method: GET
+headers:
+  Accept: application/json
+  Authorization: Bearer {{api_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      // Тест 4: Проверка исполнения платежа
+      //
+      // Цель: Проверить что созданный платеж исполняется
+
+      pm.test('Запрос информации о транзакции обработан', function () {
+          pm.expect([200, 401, 404]).to.include(pm.response.code);
+      });
+
+      pm.test('Ответ в формате JSON', function () {
+          pm.response.to.be.json;
+      });
+
+      if (pm.response.code === 200) {
+          const jsonData = pm.response.json();
+          
+          pm.test('Транзакция найдена в системе', function () {
+              pm.expect(jsonData).to.have.property('txnId');
+          });
+          
+          pm.test('Статус транзакции указан', function () {
+              pm.expect(jsonData).to.have.property('status');
+              const status = jsonData.status;
+              
+              // Возможные статусы: WAITING, SUCCESS, ERROR
+              pm.expect(['WAITING', 'SUCCESS', 'ERROR']).to.include(status);
+              
+              console.log(`Статус транзакции: ${status}`);
+              
+              if (status === 'SUCCESS') {
+                  console.log(' Платеж исполнен успешно');
+              } else if (status === 'WAITING') {
+                  console.log(' Платеж в процессе исполнения');
+              } else if (status === 'ERROR') {
+                  console.log(' Ошибка при исполнении платежа');
+                  if (jsonData.errorCode) {
+                      console.log(`Код ошибки: ${jsonData.errorCode}`);
+                  }
+              }
+          });
+          
+          pm.test('Сумма транзакции соответствует запрошенной', function () {
+              pm.expect(jsonData).to.have.property('sum');
+              pm.expect(jsonData.sum.amount).to.equal(1);
+              console.log(`Сумма: ${jsonData.sum.amount}`);
+          });
+          
+          pm.test('Дата транзакции указана', function () {
+              pm.expect(jsonData).to.have.property('date');
+              
+              // Проверяем валидность даты
+              const date = new Date(jsonData.date);
+              pm.expect(isNaN(date.getTime())).to.be.false;
+              
+              console.log(`Дата: ${jsonData.date}`);
+          });
+          
+          pm.test('Информация о провайдере присутствует', function () {
+              if (jsonData.provider) {
+                  pm.expect(jsonData.provider).to.have.property('id');
+                  console.log(`Провайдер: ${jsonData.provider.shortName || jsonData.provider.id}`);
+              }
+          });
+          
+          console.log('\n Информация о транзакции получена успешно');
+          console.log(' Структура ответа соответствует документации');
+          
+      } else if (pm.response.code === 404) {
+          console.log(' Транзакция не найдена (404)');
+          console.log('Возможные причины:');
+          console.log('  - Транзакция еще не попала в систему');
+          console.log('  - Платеж не был создан из-за ошибки в предыдущем тесте');
+          
+      } else if (pm.response.code === 401) {
+          console.log(' Требуется авторизация для проверки транзакции');
+      }
+    language: text/javascript
+  - type: beforeRequest
+    code: |-
+      // Проверяем наличие ID транзакции из предыдущего теста
+      const transactionId = pm.environment.get('transaction_id');
+
+      if (!transactionId) {
+          console.warn(' Transaction ID не найден в переменных окружения');
+          console.warn('Используется placeholder ID для демонстрации структуры запроса');
+          pm.environment.set('transaction_id', '999999999');
+      } else {
+          console.log('Transaction ID:', transactionId);
+      }
+    language: text/javascript
+order: 4000

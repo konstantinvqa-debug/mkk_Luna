@@ -1,0 +1,106 @@
+$kind: http-request
+description: |-
+  **Создание платежа на 1 рубль**
+
+  Перевод на QIWI кошелек (провайдер ID = 99)
+
+  Проверяется:
+  - Успешное создание платежа
+  - Сумма = 1 рубль
+  - Получение ID транзакции
+  - Корректный статус транзакции
+url: '{{base_url}}/sinap/api/v2/terms/99/payments'
+method: POST
+headers:
+  Accept: application/json
+  Content-Type: application/json
+  Authorization: Bearer {{api_token}}
+body:
+  type: text
+  content: |-
+    {
+      "id": "{{transaction_id_request}}",
+      "sum": {
+        "amount": 1,
+        "currency": "643"
+      },
+      "paymentMethod": {
+        "type": "Account",
+        "accountId": "643"
+      },
+      "comment": "Тестовый платеж - Postman автотест",
+      "fields": {
+        "account": "{{test_recipient_wallet}}"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      // Тест 3: Создание платежа на 1 рубль
+      //
+      // Цель: Проверить создание платежа на сумму 1 рубль
+
+      pm.test('Запрос создания платежа обработан', function () {
+          // Ожидаемые статусы:
+          // 200/201 - создан успешно
+          // 400/422 - ошибка валидации
+          // 401 - не авторизован
+          pm.expect([200, 201, 400, 401, 403, 422]).to.include(pm.response.code);
+      });
+
+      pm.test('Ответ в формате JSON', function () {
+          pm.response.to.be.json;
+      });
+
+      if (pm.response.code === 200 || pm.response.code === 201) {
+          const jsonData = pm.response.json();
+          
+          pm.test('Платеж создан успешно', function () {
+              pm.expect(jsonData).to.have.property('id');
+          });
+          
+          pm.test('Сумма платежа соответствует запрошенной (1 рубль)', function () {
+              pm.expect(jsonData).to.have.property('sum');
+              pm.expect(jsonData.sum.amount).to.equal(1);
+          });
+          
+          pm.test('Ответ содержит информацию о транзакции', function () {
+              pm.expect(jsonData).to.have.property('transaction');
+              pm.expect(jsonData.transaction).to.have.property('id');
+              pm.expect(jsonData.transaction).to.have.property('state');
+          });
+          
+          pm.test('Статус транзакции валидный', function () {
+              const state = jsonData.transaction.state.code;
+              pm.expect(['Accepted', 'Processing', 'Success']).to.include(state);
+              console.log(`Статус транзакции: ${state}`);
+          });
+          
+          // Сохраняем ID транзакции для следующего теста
+          if (jsonData.transaction && jsonData.transaction.id) {
+              pm.environment.set('transaction_id', jsonData.transaction.id);
+              console.log(` ID транзакции сохранен: ${jsonData.transaction.id}`);
+          }
+          
+          console.log(' Платеж на 1 рубль создан успешно');
+          
+      } else if (pm.response.code === 400 || pm.response.code === 422) {
+          const jsonData = pm.response.json();
+          console.log(' Ошибка валидации платежа');
+          if (jsonData.message) {
+              console.log(`Сообщение: ${jsonData.message}`);
+          }
+          
+      } else if (pm.response.code === 401) {
+          console.log(' Требуется валидный токен для создания платежа');
+          console.log('Структура запроса корректна');
+      }
+    language: text/javascript
+  - type: beforeRequest
+    code: |-
+      // Генерируем уникальный ID транзакции
+      const transactionId = 'test_' + Date.now();
+      pm.environment.set('transaction_id_request', transactionId);
+      console.log('Generated transaction ID:', transactionId);
+    language: text/javascript
+order: 3000

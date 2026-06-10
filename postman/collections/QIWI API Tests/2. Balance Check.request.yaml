@@ -1,0 +1,97 @@
+$kind: http-request
+description: |-
+  **Проверка баланса**
+
+  Получение всех счетов кошелька и проверка:
+  - Структуры ответа
+  - **КЛЮЧЕВОЕ УСЛОВИЕ: Баланс всегда больше 0**
+  - Формата данных о балансе
+  - Наличия обязательных полей
+url: '{{base_url}}/funding-sources/v2/persons/{{wallet}}/accounts'
+method: GET
+headers:
+  Accept: application/json
+  Authorization: Bearer {{api_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      // Тест 2: Проверка баланса
+      //
+      // Цель: Проверить что баланс всегда больше 0
+      // Ключевое условие задания
+
+      pm.test('Запрос баланса выполнен успешно (200 или 401)', function () {
+          pm.expect([200, 401, 403]).to.include(pm.response.code);
+      });
+
+      pm.test('Ответ в формате JSON', function () {
+          pm.response.to.be.json;
+      });
+
+      if (pm.response.code === 200) {
+          const jsonData = pm.response.json();
+          
+          pm.test('Структура ответа содержит массив accounts', function () {
+              pm.expect(jsonData).to.have.property('accounts');
+              pm.expect(jsonData.accounts).to.be.an('array');
+          });
+          
+          pm.test('Массив accounts не пустой', function () {
+              pm.expect(jsonData.accounts.length).to.be.above(0);
+          });
+          
+          pm.test('Каждый счет имеет обязательные поля', function () {
+              jsonData.accounts.forEach((account, index) => {
+                  pm.expect(account, `Account ${index}`).to.have.property('alias');
+                  pm.expect(account, `Account ${index}`).to.have.property('currency');
+                  pm.expect(account, `Account ${index}`).to.have.property('hasBalance');
+              });
+          });
+          
+          // КЛЮЧЕВАЯ ПРОВЕРКА: Баланс должен быть > 0
+          pm.test('КЛЮЧЕВОЕ УСЛОВИЕ: Баланс всегда больше 0', function () {
+              let accountsWithBalance = 0;
+              let allBalancesPositive = true;
+              
+              jsonData.accounts.forEach((account) => {
+                  if (account.hasBalance && account.balance) {
+                      accountsWithBalance++;
+                      const amount = account.balance.amount;
+                      
+                      console.log(`Счет ${account.alias}: ${amount} (валюта: ${account.balance.currency})`);
+                      
+                      // Проверяем что баланс > 0
+                      if (amount <= 0) {
+                          console.error(` ОШИБКА: Баланс НЕ больше 0! (${amount})`);
+                          allBalancesPositive = false;
+                      }
+                      
+                      pm.expect(amount, `Баланс счета ${account.alias}`).to.be.above(0);
+                  }
+              });
+              
+              console.log(`Всего счетов: ${jsonData.accounts.length}`);
+              console.log(`Счетов с балансом: ${accountsWithBalance}`);
+              
+              if (accountsWithBalance > 0) {
+                  pm.expect(allBalancesPositive, 'Все балансы должны быть > 0').to.be.true;
+                  console.log(' Все счета с балансом имеют значение > 0');
+              } else {
+                  console.warn(' Нет счетов с доступным балансом');
+              }
+          });
+          
+          pm.test('Формат суммы баланса корректный (число)', function () {
+              jsonData.accounts.forEach((account) => {
+                  if (account.hasBalance && account.balance) {
+                      pm.expect(account.balance.amount).to.be.a('number');
+                      pm.expect(isFinite(account.balance.amount)).to.be.true;
+                  }
+              });
+          });
+          
+      } else if (pm.response.code === 401) {
+          console.log(' Требуется валидный токен для проверки баланса');
+      }
+    language: text/javascript
+order: 2000

@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: c4a08b42-9951-4fa7-8a15-1d00a71b9a49
+
+localResources:
+  docs:
+    - ..\README.md
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ..\postman\collections\QIWI API Tests: qiwi-api-tests-2026

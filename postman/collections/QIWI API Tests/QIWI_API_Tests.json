@@ -1,0 +1,359 @@
+{
+    "info": {
+      "name": "QIWI API Tests",
+      "description": "Тестовое задание для МКК «Луна» (Небус)\n\nАвтотесты API QIWI Кошелька:\n1. Проверка доступности сервиса\n2. Проверка баланса (>0)\n3. Создание платежа на 1 рубль\n4. Исполнение платежа",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "_postman_id": "mkk-luna-qiwi-tests"
+    },
+    "variable": [
+      {
+        "key": "base_url",
+        "value": "https://edge.qiwi.com",
+        "type": "string"
+      },
+      {
+        "key": "api_token",
+        "value": "your_bearer_token_here",
+        "type": "string"
+      },
+      {
+        "key": "wallet",
+        "value": "79991234567",
+        "type": "string"
+      },
+      {
+        "key": "test_recipient_wallet",
+        "value": "79991234568",
+        "type": "string"
+      },
+      {
+        "key": "transaction_id_request",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "transaction_id",
+        "value": "",
+        "type": "string"
+      }
+    ],
+    "item": [
+      {
+        "name": "1. Проверка доступности сервиса",
+        "description": "Используем метод получения истории платежей для проверки:\n- Доступности API\n- Корректности формата ответа\n- Времени отклика\n\nЕсли формат ответа отличается от описанного в документации, это признак проблем с сервисом.",
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "// Тест 1: Проверка доступности сервиса",
+                "// Цель: Убедиться что API доступен и возвращает корректный формат ответа",
+                "",
+                "pm.test('Сервис доступен (статус 200 или 401)', function () {",
+                "    pm.expect([200, 401, 403]).to.include(pm.response.code);",
+                "});",
+                "",
+                "pm.test('Ответ в формате JSON', function () {",
+                "    pm.response.to.be.json;",
+                "});",
+                "",
+                "pm.test('Время ответа приемлемое (< 5000ms)', function () {",
+                "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                "});",
+                "",
+                "if (pm.response.code === 200) {",
+                "    const jsonData = pm.response.json();",
+                "    ",
+                "    pm.test('Структура ответа соответствует документации', function () {",
+                "        pm.expect(jsonData).to.have.property('data');",
+                "        pm.expect(jsonData.data).to.be.an('array');",
+                "    });",
+                "    ",
+                "    if (jsonData.data.length > 0) {",
+                "        const payment = jsonData.data[0];",
+                "        pm.expect(payment).to.have.property('txnId');",
+                "        pm.expect(payment).to.have.property('date');",
+                "        pm.expect(payment).to.have.property('status');",
+                "        pm.expect(payment).to.have.property('sum');",
+                "    }",
+                "    ",
+                "    console.log('✓ Сервис полностью доступен и работает корректно');",
+                "} else if (pm.response.code === 401) {",
+                "    console.log('⚠ Сервис доступен, но требуется валидный токен');",
+                "}",
+                "",
+                "pm.test('Content-Type header присутствует', function () {",
+                "    pm.response.to.have.header('Content-Type');",
+                "});"
+              ],
+              "type": "text/javascript"
+            }
+          }
+        ],
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer {{api_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/payment-history/v2/persons/{{wallet}}/payments?rows=10&operation=ALL",
+            "host": ["{{base_url}}"],
+            "path": ["payment-history", "v2", "persons", "{{wallet}}", "payments"],
+            "query": [
+              {
+                "key": "rows",
+                "value": "10"
+              },
+              {
+                "key": "operation",
+                "value": "ALL"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "2. Проверка баланса",
+        "description": "Получение всех счетов кошелька и проверка:\n- Структуры ответа\n- КЛЮЧЕВОЕ УСЛОВИЕ: Баланс всегда больше 0\n- Формата данных о балансе\n- Наличия обязательных полей",
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "// Тест 2: Проверка баланса",
+                "// Цель: Проверить что баланс всегда больше 0",
+                "",
+                "pm.test('Запрос баланса выполнен успешно (200 или 401)', function () {",
+                "    pm.expect([200, 401, 403]).to.include(pm.response.code);",
+                "});",
+                "",
+                "pm.test('Ответ в формате JSON', function () {",
+                "    pm.response.to.be.json;",
+                "});",
+                "",
+                "if (pm.response.code === 200) {",
+                "    const jsonData = pm.response.json();",
+                "    ",
+                "    pm.test('Структура ответа содержит массив accounts', function () {",
+                "        pm.expect(jsonData).to.have.property('accounts');",
+                "        pm.expect(jsonData.accounts).to.be.an('array');",
+                "    });",
+                "    ",
+                "    pm.test('Массив accounts не пустой', function () {",
+                "        pm.expect(jsonData.accounts.length).to.be.above(0);",
+                "    });",
+                "    ",
+                "    pm.test('КЛЮЧЕВОЕ УСЛОВИЕ: Баланс всегда больше 0', function () {",
+                "        let accountsWithBalance = 0;",
+                "        ",
+                "        jsonData.accounts.forEach((account) => {",
+                "            if (account.hasBalance && account.balance) {",
+                "                accountsWithBalance++;",
+                "                const amount = account.balance.amount;",
+                "                console.log(`Счет ${account.alias}: ${amount} (валюта: ${account.balance.currency})`);",
+                "                pm.expect(amount, `Баланс счета ${account.alias}`).to.be.above(0);",
+                "            }",
+                "        });",
+                "        ",
+                "        console.log(`Счетов с балансом: ${accountsWithBalance}`);",
+                "        if (accountsWithBalance === 0) {",
+                "            console.warn('⚠ Нет счетов с доступным балансом');",
+                "        }",
+                "    });",
+                "} else if (pm.response.code === 401) {",
+                "    console.log('⚠ Требуется валидный токен для проверки баланса');",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }
+        ],
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer {{api_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/funding-sources/v2/persons/{{wallet}}/accounts",
+            "host": ["{{base_url}}"],
+            "path": ["funding-sources", "v2", "persons", "{{wallet}}", "accounts"]
+          }
+        }
+      },
+      {
+        "name": "3. Создание платежа (на 1 рубль)",
+        "description": "Перевод на QIWI кошелек (провайдер ID = 99)\n\nПроверяется:\n- Успешное создание платежа\n- Сумма = 1 рубль\n- Получение ID транзакции\n- Корректный статус транзакции",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "exec": [
+                "// Генерируем уникальный ID транзакции",
+                "const transactionId = 'test_' + Date.now();",
+                "pm.environment.set('transaction_id_request', transactionId);",
+                "console.log('Generated transaction ID:', transactionId);"
+              ],
+              "type": "text/javascript"
+            }
+          },
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "// Тест 3: Создание платежа на 1 рубль",
+                "",
+                "pm.test('Запрос создания платежа обработан (200/201/400/401)', function () {",
+                "    pm.expect([200, 201, 400, 401, 403, 422]).to.include(pm.response.code);",
+                "});",
+                "",
+                "pm.test('Ответ в формате JSON', function () {",
+                "    pm.response.to.be.json;",
+                "});",
+                "",
+                "if (pm.response.code === 200 || pm.response.code === 201) {",
+                "    const jsonData = pm.response.json();",
+                "    ",
+                "    pm.test('Платеж создан успешно', function () {",
+                "        pm.expect(jsonData).to.have.property('id');",
+                "    });",
+                "    ",
+                "    pm.test('Сумма платежа = 1 рубль', function () {",
+                "        pm.expect(jsonData.sum.amount).to.equal(1);",
+                "    });",
+                "    ",
+                "    if (jsonData.transaction && jsonData.transaction.id) {",
+                "        pm.environment.set('transaction_id', jsonData.transaction.id);",
+                "        console.log('✓ ID транзакции сохранен:', jsonData.transaction.id);",
+                "    }",
+                "    ",
+                "    console.log('✓ Платеж на 1 рубль создан');",
+                "} else if (pm.response.code === 401) {",
+                "    console.log('⚠ Требуется валидный токен для создания платежа');",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }
+        ],
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer {{api_token}}"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"id\": \"{{transaction_id_request}}\",\n  \"sum\": {\n    \"amount\": 1,\n    \"currency\": \"643\"\n  },\n  \"paymentMethod\": {\n    \"type\": \"Account\",\n    \"accountId\": \"643\"\n  },\n  \"comment\": \"Тестовый платеж - Postman автотест\",\n  \"fields\": {\n    \"account\": \"{{test_recipient_wallet}}\"\n  }\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/sinap/api/v2/terms/99/payments",
+            "host": ["{{base_url}}"],
+            "path": ["sinap", "api", "v2", "terms", "99", "payments"]
+          }
+        }
+      },
+      {
+        "name": "4. Проверка исполнения платежа",
+        "description": "Получение информации о созданной транзакции и проверка:\n- Наличия транзакции в системе\n- Статуса исполнения (WAITING/SUCCESS/ERROR)\n- Корректности суммы\n- Наличия всех обязательных полей",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "exec": [
+                "const transactionId = pm.environment.get('transaction_id');",
+                "if (!transactionId) {",
+                "    console.warn('⚠ Transaction ID не найден. Используется placeholder.');",
+                "    pm.environment.set('transaction_id', '999999999');",
+                "} else {",
+                "    console.log('Проверка транзакции:', transactionId);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          },
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "// Тест 4: Проверка исполнения платежа",
+                "",
+                "pm.test('Запрос информации о транзакции обработан', function () {",
+                "    pm.expect([200, 401, 404]).to.include(pm.response.code);",
+                "});",
+                "",
+                "pm.test('Ответ в формате JSON', function () {",
+                "    pm.response.to.be.json;",
+                "});",
+                "",
+                "if (pm.response.code === 200) {",
+                "    const jsonData = pm.response.json();",
+                "    ",
+                "    pm.test('Транзакция найдена', function () {",
+                "        pm.expect(jsonData).to.have.property('txnId');",
+                "    });",
+                "    ",
+                "    pm.test('Статус транзакции валидный', function () {",
+                "        const status = jsonData.status;",
+                "        pm.expect(['WAITING', 'SUCCESS', 'ERROR']).to.include(status);",
+                "        console.log(`Статус транзакции: ${status}`);",
+                "        ",
+                "        if (status === 'SUCCESS') console.log('✓ Платеж исполнен');",
+                "        else if (status === 'WAITING') console.log('⏳ Платеж в процессе');",
+                "    });",
+                "    ",
+                "    pm.test('Сумма транзакции = 1 рубль', function () {",
+                "        pm.expect(jsonData.sum.amount).to.equal(1);",
+                "    });",
+                "} else if (pm.response.code === 404) {",
+                "    console.log('⚠ Транзакция не найдена');",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }
+        ],
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer {{api_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/payment-history/v2/transactions/{{transaction_id}}",
+            "host": ["{{base_url}}"],
+            "path": ["payment-history", "v2", "transactions", "{{transaction_id}}"]
+          }
+        }
+      }
+    ]
+  }

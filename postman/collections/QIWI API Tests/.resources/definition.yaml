@@ -1,0 +1,15 @@
+$kind: collection
+description: |-
+  Коллекция тестов для API QIWI Кошелька
+
+  Тестовое задание МКК Луна (Небус)
+
+  Включает 4 основных теста:
+  1. Проверка доступности сервиса
+  2. Проверка баланса (баланс > 0)
+  3. Создание платежа на 1 рубль
+  4. Исполнение платежа
+
+  Документация: https://developer.qiwi.com/ru/qiwi-wallet-personal/
+variables:
+  base_url: https://edge.qiwi.com

@@ -1,0 +1,43 @@
+{
+  "id": "qiwi-api-environment",
+  "name": "QIWI API Environment",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "https://edge.qiwi.com",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "api_token",
+      "value": "U1QtOTkwMTAyLWNud3FpdWhmbzg3M",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "wallet",
+      "value": "79991234567",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "test_recipient_wallet",
+      "value": "79991234567",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "transaction_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "transaction_id_request",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

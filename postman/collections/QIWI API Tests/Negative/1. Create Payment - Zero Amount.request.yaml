@@ -1,0 +1,23 @@
+$kind: http-request
+description: Негативный тест - создание платежа на 0 рублей
+url: '{{base_url}}/sinap/api/v2/terms/99/payments'
+method: POST
+headers:
+  Accept: application/json
+  Content-Type: application/json
+  Authorization: Bearer {{api_token}}
+body:
+  type: text
+  content: |
+    {
+      "id": "test_zero_{{$timestamp}}",
+      "sum": {"amount": 0, "currency": "643"},
+      "paymentMethod": {"type": "Account", "accountId": "643"},
+      "fields": {"account": "{{test_recipient_wallet}}"}
+    }
+scripts:
+  - type: afterResponse
+    code: |
+      pm.test('Ожидается 400 или 422 (неверная сумма)', function () {
+          pm.expect([400, 422]).to.include(pm.response.code);
+      });

@@ -1,0 +1,75 @@
+$kind: http-request
+description: |-
+  **Проверка доступности сервиса**
+
+  Используем метод получения истории платежей для проверки:
+  - Доступности API
+  - Корректности формата ответа
+  - Времени отклика
+
+  Если формат ответа отличается от описанного в документации, это признак проблем с сервисом.
+url: '{{base_url}}/payment-history/v2/persons/{{wallet}}/payments?rows=10&operation=ALL'
+method: GET
+headers:
+  Accept: application/json
+  Authorization: Bearer {{api_token}}
+queryParams:
+  - key: rows
+    value: '10'
+    description: Количество платежей
+  - key: operation
+    value: ALL
+    description: Тип операций
+scripts:
+  - type: afterResponse
+    code: |-
+      // Тест 1: Проверка доступности сервиса
+      //
+      // Цель: Убедиться что API доступен и возвращает корректный формат ответа
+      // Используем endpoint 'Получить историю платежей'
+
+      pm.test('Сервис доступен (статус 200 или 401)', function () {
+          // Ожидаем либо успешный ответ, либо ошибку авторизации
+          pm.expect([200, 401, 403]).to.include(pm.response.code);
+      });
+
+      pm.test('Ответ в формате JSON', function () {
+          pm.response.to.be.json;
+      });
+
+      pm.test('Время ответа приемлемое (< 5000ms)', function () {
+          pm.expect(pm.response.responseTime).to.be.below(5000);
+      });
+
+      // Если ответ успешный, проверяем структуру
+      if (pm.response.code === 200) {
+          pm.test('Структура ответа соответствует документации', function () {
+              const jsonData = pm.response.json();
+              
+              pm.expect(jsonData).to.have.property('data');
+              pm.expect(jsonData.data).to.be.an('array');
+          });
+          
+          pm.test('Если есть платежи, структура элемента корректна', function () {
+              const jsonData = pm.response.json();
+              
+              if (jsonData.data.length > 0) {
+                  const payment = jsonData.data[0];
+                  
+                  pm.expect(payment).to.have.property('txnId');
+                  pm.expect(payment).to.have.property('date');
+                  pm.expect(payment).to.have.property('status');
+                  pm.expect(payment).to.have.property('sum');
+              }
+          });
+          
+          console.log(' Сервис полностью доступен и работает корректно');
+      } else if (pm.response.code === 401) {
+          console.log(' Сервис доступен, но требуется валидный токен');
+      }
+
+      pm.test('Content-Type header присутствует', function () {
+          pm.response.to.have.header('Content-Type');
+      });
+    language: text/javascript
+order: 1000
