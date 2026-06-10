@@ -1,0 +1,26 @@
+{
+  "name": "qiwi-api-tests",
+  "version": "1.0.0",
+  "description": "Автотесты API QIWI Кошелька - тестовое задание МКК Луна (Небус)",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report",
+    "postman:test": "newman run postman/collections/QIWI_API_Tests.json -e postman/environments/QIWI_API_Environment.json"
+  },
+  "keywords": [
+    "api",
+    "testing",
+    "playwright",
+    "qiwi",
+    "automation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "newman": "^6.1.0"
+  }
+}
